@@ -4,6 +4,7 @@ import argparse
 import getpass
 import json
 import sys
+import warnings
 
 from . import api, core, credentials, routines
 from .storage import UserError, home, read_json
@@ -13,7 +14,16 @@ def capture_token():
     if not sys.stdin.isatty():
         raise UserError("Setup requires a local interactive terminal, never chat or MCP stdin.")
     credentials.backend()  # fail before requesting a secret if no secure vault exists
-    value = getpass.getpass("Sleepme API token (hidden, stored only in your OS vault): ").strip()
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", getpass.GetPassWarning)
+            value = getpass.getpass(
+                "Sleepme API token (hidden, stored only in your OS vault): "
+            ).strip()
+    except getpass.GetPassWarning:
+        raise UserError(
+            "Hidden input is unavailable. Use a local terminal with echo control."
+        ) from None
     if not value or any(c.isspace() for c in value):
         raise UserError("Token is empty or contains whitespace; nothing saved.")
     api.request("GET", "/devices", candidate=value)  # read-only validation BEFORE replacement

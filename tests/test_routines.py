@@ -85,3 +85,77 @@ def test_invalid_markdown_blocks_execution(monkeypatch):
     monkeypatch.setattr(routines, "prepare", lambda *a, **k: pytest.fail("must fail closed"))
     routines.tick()
     assert storage.read_json("runner-error.json", None)
+
+
+@pytest.mark.parametrize("operation", ["pause", "delete"])
+def test_missing_mapping_does_not_prevent_stopping_routine(operation):
+    routines.update(rule(), confirmed=True)
+    storage.save_md("devices.md", [])
+    assert routines.definitions()[0]["id"] == "wake"
+    if operation == "pause":
+        routines.update(rule(enabled=False), confirmed=True)
+        assert routines.definitions()[0]["enabled"] is False
+    else:
+        routines.update(delete_id="wake", confirmed=True)
+        assert routines.definitions() == []
+
+
+@pytest.mark.parametrize("change", ["disabled", "deleted", "temperature"])
+def test_claimed_occurrence_does_not_adopt_later_rule(change, monkeypatch):
+    original = rule()
+    routines.update(original, confirmed=True)
+    if change == "deleted":
+        routines.update(delete_id="wake", confirmed=True)
+    elif change == "disabled":
+        routines.update(rule(enabled=False), confirmed=True)
+    else:
+        routines.update(rule(temperature=80), confirmed=True)
+    monkeypatch.setattr(core, "change", lambda *a, **k: pytest.fail("must not write changed rule"))
+    assert (
+        routines.prepare("wake", automatic=True, expected=original)["outcome"]
+        == "skipped_definition_changed"
+    )
+
+
+def test_slow_earlier_routine_cannot_make_wake_fire_late(monkeypatch):
+    routines.update(rule(id="first"), confirmed=True)
+    routines.update(rule(id="second"), confirmed=True)
+    at = dt.datetime(2026, 10, 23, 13, 30, 15, tzinfo=dt.UTC)
+    clock = [at]
+    calls = []
+
+    def slow(*args, **kwargs):
+        calls.append(args[0])
+        clock[0] += dt.timedelta(seconds=60)
+        return {"outcome": "request_accepted"}
+
+    monkeypatch.setattr(routines, "prepare", slow)
+    routines.tick(at, clock=lambda: clock[0])
+    assert calls == ["first"]
+    assert storage.read_json("history.json", {})["second:2026-10-23"]["outcome"] == "missed"
+
+
+def test_first_start_uses_routine_local_date(monkeypatch):
+    routines.update(rule(action="water_check", time="18:00"), confirmed=True)
+    # 10am in Los Angeles, with yesterday's 6pm after the current UTC midnight.
+    at = dt.datetime(2026, 10, 23, 17, 0, tzinfo=dt.UTC)
+    monkeypatch.setattr(
+        core, "water", lambda *a: pytest.fail("must not run yesterday on first start")
+    )
+    routines.tick(at)
+    assert storage.read_json("history.json", {}) == {}
+
+
+def test_failed_water_notification_keeps_observation_for_retry(monkeypatch):
+    routines.update(rule(action="water_check"), confirmed=True)
+    observation = {"target": "my side", "condition": "refill_needed"}
+    monkeypatch.setattr(core, "water", lambda _: observation)
+
+    def fail(_):
+        raise OSError("notification storage unavailable")
+
+    monkeypatch.setattr(routines, "notify", fail)
+    routines.tick(dt.datetime(2026, 10, 23, 13, 30, 15, tzinfo=dt.UTC))
+    result = storage.read_json("history.json", {})["wake:2026-10-23"]
+    assert result["outcome"] == observation
+    assert result["notification"] == "failed_retry_with_retry-notifications"

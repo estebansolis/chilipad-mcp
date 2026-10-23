@@ -37,6 +37,25 @@ def prepare_bed(routine_id: str):
     return routines.prepare(routine_id)
 
 
+DESCRIPTIONS = {
+    "get_setup_status": "Inspect vault availability, mappings, pending identification recovery, and runner status. Never returns a token.",
+    "list_devices": "Discover claimed device IDs, names, and attachments. Names and ordering do not establish bed sides. Read each selected device's status to learn its model.",
+    "get_device_status": "Read current model, controls, readings, and observation time. Supply exactly one target (confirmed alias) or device_id from discovery; IDs allow inspection before mapping. No device change.",
+    "check_water_status": "Read water status for one confirmed target alias. Missing/offline data is unknown; raw water_level has no documented unit. This does not detect cleaning or water quality.",
+    "get_sleep_reports": "Read account-scoped provider reports. Optional start_date is YYYY-MM-DD; days_back is 0–6; time_zone is an IANA zone. Omit date for today in that zone. Nullable metrics and returned dates are authoritative; do not infer a bed side.",
+    "save_device_mapping": "Replace the entire device mapping after reading it back to the user. rows contains {id, alias, optional group, optional position}. Include every mapping to retain; an empty list removes all. IDs must be discovered and aliases unique. Set confirmed only after agreement.",
+    "set_temperature": "Change only one confirmed target's temperature. Supply value plus unit F (integer 55–115) or C (13–48 in 0.5 steps), OR an explicitly requested mode maximum_cooling/maximum_heating without value/unit. Does not turn power on. Accepted is not physically ready.",
+    "set_power": "Set one confirmed target to active (on=true) or thermal standby (on=false), preserving target temperature. Requires a connected Dock Pro. Standby is not a mains disconnect.",
+    "update_device_settings": "Change only display_unit (f/c) and/or device time_zone (IANA) for a confirmed target. Does not change power, target temperature, routine timezone, or reporting timezone.",
+    "identify_devices": "Two-controller identification: begin needs agreed tests [{id,value,unit,optional on}] and confirmed=true. status reads recovery. finish/cancel/recover restore originals by default; manual changes block restoration. Keep settings only with finish, keep=true, confirmed=true. Force restoration only after fresh agreement with force=true, confirmed=true. Save confirmed side mapping separately.",
+    "list_routines": "List canonical local alarms and routines, including paused definitions and targets needing repair. Use get_routine_status for execution and inbox history.",
+    "update_routine": "Upsert a complete row or supply delete_id, with confirmed=true after user agreement. row: id (lowercase letters/digits/hyphens), enabled, target alias, action (prepare_bed/wake_temperature/water_check/reminder), time HH:MM, timezone IANA, weekdays [0–6 Monday–Sunday] OR date YYYY-MM-DD, notification inbox. Temperature actions need temperature/unit and optional on. Optional window_minutes 0–180 (wake requires 0), reminder_hours 1–8760, overrides mapping dates to HH:MM or null to skip. Set enabled=false to pause. alarm=true selects alarms.md for a new row. Inbox must be tested before enabling; samples are never implicit consent.",
+    "get_routine_status": "Read runner heartbeat/errors, per-occurrence outcomes, automatic-write suppression, and the local notification inbox. Inbox delivery is not a push or audible alarm.",
+    "prepare_bed": "Run a saved temperature routine immediately by routine_id, using its target, temperature, and explicitly saved power choice. Requires user intent to perform those changes, even if the recurring schedule is paused.",
+    "resume_automation": "Clear the target's explicit/manual-change suppression after user agreement (confirmed=true). Does not replay missed or already claimed occurrences.",
+}
+
+
 def create_server():
     mcp = FastMCP(
         "Unofficial Chilipad MCP",
@@ -90,6 +109,7 @@ def create_server():
 
         mcp.tool(
             name=name,
+            description=DESCRIPTIONS[name],
             annotations=ToolAnnotations(
                 readOnlyHint=readonly, destructiveHint=not readonly, openWorldHint=True
             ),

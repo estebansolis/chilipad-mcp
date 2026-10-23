@@ -168,3 +168,24 @@ def test_fixture_reports_round_trip(monkeypatch):
         result["data"]["reports"][0]["sessions"][0]["hypnogram"]["segments"][0]["stage"]
         == "NO_DATA"
     )
+
+
+def test_concurrent_429_cannot_shorten_existing_backoff(monkeypatch):
+    monkeypatch.setattr(api.credentials, "token", lambda: "fake-test-secret")
+    monkeypatch.setattr(api.time, "time", lambda: 1000.0)
+
+    def respond(req):
+        # Another process received a longer Retry-After while this request was in flight.
+        state = storage.read_json("budget.json", {})
+        state["blocked_until"] = 1100.0
+        storage.save_json("budget.json", state)
+        return httpx.Response(429, headers={"Retry-After": "1"})
+
+    with pytest.raises(storage.UserError, match="rate limit"):
+        api.request(
+            "PATCH",
+            "/devices/fixture-a",
+            body={"set_temperature_f": 70},
+            transport=httpx.MockTransport(respond),
+        )
+    assert storage.read_json("budget.json", {})["blocked_until"] == 1100.0

@@ -196,3 +196,75 @@ def test_resume_clears_external_change_baseline(device_api):
         core.change("my side", {"set_temperature_f": 75}, automatic=True)["outcome"]
         == "request_accepted"
     )
+
+
+def test_read_discovered_status_without_premature_mapping(device_api):
+    storage.save_md("devices.md", [])
+    result = core.status(device_id="fixture-a")
+    assert result["about"]["model"] == "Dock Pro"
+    assert storage.read_md("devices.md") == []
+    assert device_api[1] == []
+    with pytest.raises(storage.UserError, match="discovery"):
+        core.status(device_id="not-claimed")
+    with pytest.raises(storage.UserError, match="exactly one"):
+        core.status(target="my side", device_id="fixture-a")
+
+
+def test_recovery_preserves_manual_power_change(device_api):
+    core.identify("begin", identification_spec(), True)
+    device_api[0]["fixture-a"]["control"]["thermal_control_status"] = "active"
+    result = core.identify("recover")
+    assert result["recovery_pending"]
+    assert device_api[0]["fixture-a"]["control"]["thermal_control_status"] == "active"
+    assert device_api[0]["fixture-a"]["control"]["set_temperature_f"] == 68
+    assert "fixture-a" in storage.read_json("recovery.json", {})["devices"]
+
+
+def test_automation_retains_power_expectation_after_temperature_only_write(device_api):
+    core.change(
+        "my side", {"set_temperature_f": 70, "thermal_control_status": "active"}, automatic=True
+    )
+    core.change("my side", {"set_temperature_f": 71}, automatic=True)
+    device_api[0]["fixture-a"]["control"]["thermal_control_status"] = "standby"
+    result = core.change("my side", {"set_temperature_f": 75}, automatic=True)
+    assert result["outcome"] == "external_change_detected_automation_suppressed"
+    assert len(device_api[1]) == 2
+
+
+def test_automatic_write_checks_deadline_after_status_read(device_api, monkeypatch):
+    import datetime as dt
+
+    start = dt.datetime(2026, 10, 23, 13, 30, 55, tzinfo=dt.UTC)
+    clock = [start]
+    real = api.dock_status
+
+    def slow_status(device_id):
+        clock[0] += dt.timedelta(seconds=10)
+        return real(device_id)
+
+    monkeypatch.setattr(api, "dock_status", slow_status)
+    result = core.change(
+        "my side",
+        {"set_temperature_f": 75},
+        automatic=True,
+        deadline=start + dt.timedelta(seconds=5),
+        clock=lambda: clock[0],
+    )
+    assert result["outcome"] == "missed"
+    assert device_api[1] == []
+
+
+def test_token_entry_refuses_visible_input_fallback(monkeypatch):
+    import warnings
+
+    monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(credentials, "backend", lambda: object())
+    monkeypatch.setattr(credentials, "store", lambda _: pytest.fail("must not save"))
+
+    def fallback(_):
+        warnings.warn("Cannot control echo", cli.getpass.GetPassWarning)
+        pytest.fail("must stop before visible fallback reads a token")
+
+    monkeypatch.setattr(cli.getpass, "getpass", fallback)
+    with pytest.raises(storage.UserError, match="Hidden input"):
+        cli.capture_token()

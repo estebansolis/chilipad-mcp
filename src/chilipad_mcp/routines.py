@@ -29,7 +29,7 @@ FIELDS = {
 }
 
 
-def validate(row):
+def validate(row, *, check_ready=True):
     if not isinstance(row, dict) or set(row) - FIELDS:
         raise UserError("Unsupported routine fields.")
     if not isinstance(row.get("id"), str) or not re.fullmatch(r"[a-z0-9-]{1,64}", row["id"]):
@@ -38,7 +38,9 @@ def validate(row):
         raise UserError("Routine enabled must be a boolean.")
     if row.get("action") not in ("prepare_bed", "wake_temperature", "water_check", "reminder"):
         raise UserError("Unsupported action; no audible alarm or automatic cleaning is available.")
-    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", row.get("time", "")):
+    if not isinstance(row.get("time"), str) or not re.fullmatch(
+        r"(?:[01]\d|2[0-3]):[0-5]\d", row["time"]
+    ):
         raise UserError("Routine time must be HH:MM.")
     api.timezone(row.get("timezone"))
     if row.get("notification") != "inbox":
@@ -82,22 +84,30 @@ def validate(row):
             not isinstance(value, str) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value)
         ):
             raise UserError("Override time must be HH:MM or null.")
-    if row["enabled"]:
+    if not isinstance(row.get("target"), str) or not row["target"].strip():
+        raise UserError("Routine target must be a nonempty alias.")
+    if row["enabled"] and check_ready:
         core.resolve(row.get("target"))
         if read_json("notification-test.json", {}).get("channel") != "inbox":
             raise UserError("Run chilipad-mcp notification-test before enabling schedules.")
     return row
 
 
-def definitions():
+def _definitions(*, check_ready=True):
     rows = []
     for file in ("alarms.md", "routines.md"):
         for row in read_md(file):
-            validate(row)
+            validate(row, check_ready=check_ready)
             rows.append(row)
     if len({r["id"] for r in rows}) != len(rows):
         raise UserError("Routine IDs must be unique across both Markdown files.")
     return rows
+
+
+def definitions():
+    """List saved definitions, including routines whose target needs repair."""
+    with lock():
+        return _definitions(check_ready=False)
 
 
 def update(
@@ -111,7 +121,8 @@ def update(
     if (row is None) == (delete_id is None):
         raise UserError("Supply a routine or a delete_id, not both.")
     with lock():
-        all_rows = definitions()
+        # Missing aliases or an unavailable notification channel must not prevent pausing/deletion.
+        all_rows = _definitions(check_ready=False)
         if row is not None:
             validate(row)
         key = row["id"] if row is not None else delete_id
@@ -131,15 +142,22 @@ def update(
         }
 
 
-def prepare(routine_id: str, automatic: bool = False):
-    rows = [r for r in definitions() if r["id"] == routine_id]
-    if len(rows) != 1 or rows[0]["action"] not in ("prepare_bed", "wake_temperature"):
-        raise UserError("Select a saved temperature routine.")
-    row = rows[0]
-    body = api.temperature(row["temperature"], row["unit"])
-    if "on" in row:
-        body["thermal_control_status"] = "active" if row["on"] else "standby"
-    return core.change(row["target"], body, automatic=automatic)
+def prepare(routine_id: str, automatic: bool = False, *, expected=None, deadline=None, clock=None):
+    # Serialize tool edits with dispatch; a previously claimed occurrence cannot adopt a new rule.
+    with lock():
+        rows = [r for r in _definitions(check_ready=False) if r["id"] == routine_id]
+        if automatic and (
+            not rows or not rows[0]["enabled"] or (expected is not None and rows[0] != expected)
+        ):
+            return {"outcome": "skipped_definition_changed"}
+        if len(rows) != 1 or rows[0]["action"] not in ("prepare_bed", "wake_temperature"):
+            raise UserError("Select a saved temperature routine.")
+        row = rows[0]
+        validate(row)
+        body = api.temperature(row["temperature"], row["unit"])
+        if "on" in row:
+            body["thermal_control_status"] = "active" if row["on"] else "standby"
+        return core.change(row["target"], body, automatic=automatic, deadline=deadline, clock=clock)
 
 
 def notify(message):
@@ -175,11 +193,14 @@ def occurrence(row, date):
     return utc, exists
 
 
-def tick(at=None):
-    at = at or core.now()
+def tick(at=None, *, clock=None):
+    # Explicit at supplies a frozen test clock; production checks real time before each action.
+    clock = clock or (core.now if at is None else lambda: at)
+    at = at or clock()
     history = read_json("history.json", {})
     try:
-        rows = definitions()
+        with lock():
+            rows = _definitions()
         save_json("last-valid-routines.json", rows)
         save_json("runner-error.json", None)
     except UserError as e:
@@ -187,15 +208,15 @@ def tick(at=None):
         # Invalid manual edits fail closed. Cached revision is retained for repair, not execution.
         return
     last = read_json("runner-heartbeat.json", {}).get("at")
-    start = (
-        dt.datetime.fromisoformat(last)
-        if last
-        else at.replace(hour=0, minute=0, second=0, microsecond=0)
-    )
     for row in rows:
         if not row["enabled"]:
             continue
         zone = ZoneInfo(row["timezone"])
+        start = (
+            dt.datetime.fromisoformat(last)
+            if last
+            else at.astimezone(zone).replace(hour=0, minute=0, second=0, microsecond=0)
+        )
         first = start.astimezone(zone).date()
         last_date = at.astimezone(zone).date()
         # Retain at most a month of missed occurrences after long downtime.
@@ -226,14 +247,15 @@ def tick(at=None):
                     }
                     save_json("history.json", history)
                     continue
-            age = (at - intended).total_seconds()
+            dispatch_at = clock()
+            age = (dispatch_at - intended).total_seconds()
             window = row.get("window_minutes", 0) * 60
             can_catch_up = row["action"] == "water_check" or (
                 row["action"] == "prepare_bed" and age <= window
             )
             result = {
                 "intended_at": intended.isoformat(),
-                "claimed_at": at.isoformat(),
+                "claimed_at": dispatch_at.isoformat(),
                 "outcome": "claimed_unknown",
                 "notification": "pending",
             }
@@ -258,15 +280,25 @@ def tick(at=None):
                     if not alert:
                         result["notification"] = "suppressed_unchanged"
                     else:
-                        result["notification"] = notify(
-                            {"routine": row["id"], "water": observation}
-                        )
-                        state[row["id"]] = {"condition": condition, "at": at.isoformat()}
-                        save_json("water-alerts.json", state)
+                        try:
+                            result["notification"] = notify(
+                                {"routine": row["id"], "water": observation}
+                            )
+                        except OSError:
+                            result["notification"] = "failed_retry_with_retry-notifications"
+                        else:
+                            state[row["id"]] = {
+                                "condition": condition,
+                                "at": dispatch_at.isoformat(),
+                            }
+                            save_json("water-alerts.json", state)
                 elif row["action"] == "reminder":
                     result["outcome"] = "calendar_reminder_not_sensor_finding"
                 else:
-                    result["outcome"] = prepare(row["id"], automatic=True)
+                    deadline = intended + dt.timedelta(seconds=max(60, window))
+                    result["outcome"] = prepare(
+                        row["id"], automatic=True, expected=row, deadline=deadline, clock=clock
+                    )
             except UserError as e:
                 result["outcome"] = {"error": str(e)}
             if result["notification"] == "pending":

@@ -102,8 +102,18 @@ def save_mapping(rows: list[dict], confirmed: bool = False):
         return {"saved": True}
 
 
-def status(target: str):
-    return api.observed(api.request("GET", api.device_path(resolve(target))))
+def status(target: str | None = None, device_id: str | None = None):
+    """Read a confirmed alias or a discovered device ID before assigning sides."""
+    if (target is None) == (device_id is None):
+        raise UserError("Supply exactly one confirmed alias or discovered device_id.")
+    if device_id is not None:
+        api.device_path(device_id)
+        claimed = {row["id"] for row in api.request("GET", "/devices")}
+        if device_id not in claimed:
+            raise UserError("Device is not in this account's discovery results.")
+    else:
+        device_id = resolve(target)
+    return api.observed(api.request("GET", api.device_path(device_id)))
 
 
 def water(target: str):
@@ -131,7 +141,17 @@ def suppress(device_id):
     save_json("overrides.json", state)
 
 
-def change(target, body, automatic=False):
+def expected_controls(previous, patch):
+    """Retain power/settings expectations while replacing the chosen temperature scale."""
+    result = dict(previous)
+    if "set_temperature_f" in patch or "set_temperature_c" in patch:
+        result.pop("set_temperature_f", None)
+        result.pop("set_temperature_c", None)
+    result.update(patch)
+    return result
+
+
+def change(target, body, automatic=False, *, deadline=None, clock=None):
     api.validate_patch(body)
     with lock("actions"):
         device_id = resolve(target)
@@ -143,6 +163,9 @@ def change(target, body, automatic=False):
         if automatic and until and now() < dt.datetime.fromisoformat(until):
             return {"target": target, "outcome": "suppressed", "until": until}
         observed = api.dock_status(device_id)
+        # Locks and the status request may consume the entire allowed schedule window.
+        if deadline is not None and (clock or now)() >= deadline:
+            return {"target": target, "outcome": "missed"}
         auto_state = read_json("automation-state.json", {})
         prior = auto_state.get(device_id)
         if (
@@ -157,7 +180,7 @@ def change(target, body, automatic=False):
             suppress(device_id)
         api.request("PATCH", api.device_path(device_id), body=body)
         if automatic:
-            auto_state[device_id] = body
+            auto_state[device_id] = expected_controls(prior or {}, body)
         else:
             auto_state.pop(device_id, None)
         save_json("automation-state.json", auto_state)
@@ -271,6 +294,7 @@ def identify(
             for device_id, entry in snapshots.items():
                 entry["attempted"] = True
                 save_json("recovery.json", rec)  # persist BEFORE possible side effect
+                suppress(device_id)
                 try:
                     api.request("PATCH", api.device_path(device_id), body=entry["test"])
                     outcomes[device_id] = "request_accepted"
@@ -310,7 +334,8 @@ def _restore(rec, force):
             if all(current.get(k) == v for k, v in entry["original"].items()):
                 outcomes[device_id] = "original_state_observed"
                 continue
-            if not force and any(current.get(k) != v for k, v in entry["test"].items()):
+            expected = expected_controls(entry["original"], entry["test"])
+            if not force and any(current.get(k) != v for k, v in expected.items()):
                 raise UserError(
                     "Settings differ from test; obtain permission before overwriting manual changes."
                 )

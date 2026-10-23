@@ -112,7 +112,7 @@ def request(method, path, *, body=None, params=None, candidate=None, transport=N
             delay = max(1, min(delay, 86400))
             with lock("budget"):
                 state = read_json("budget.json", {})
-                state["blocked_until"] = time.time() + delay
+                state["blocked_until"] = max(state.get("blocked_until", 0), time.time() + delay)
                 save_json("budget.json", state)
             if method == "GET" and attempt < 2 and delay <= 4:
                 time.sleep(delay)

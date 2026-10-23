@@ -4,13 +4,13 @@ Release: experimental 0.1.0, October 23, 2026. No real Sleepme credential or dev
 
 ## Completed locally
 
-63 automated tests pass with warnings treated as errors.
+The automated test suite passes with warnings treated as errors; CI reports the current count.
 
 - Locked dependency resolution and clean Python environment installation on macOS arm64 / Python 3.14.
 - Synthetic API tests: valid/invalid unit boundaries, sentinel modes, minimal PATCH payloads, model/connectivity guards, redacted errors, ambiguous write timeouts, shared budget, and 429 blocking.
-- Mapping targeting and confirmation, device-count discovery branches, water unknown handling, candidate credential validation before replacement.
-- Identification original-state snapshots, restoration reads, second-device failure, manual-change protection, and explicit recovery.
-- Markdown validation, rejected-edit preservation, duplicate prevention across runner restarts, missed alarms, date-specific overrides, autumn/spring DST policy, notification-only retries, explicit/external change suppression and resumption.
+- Mapping targeting and confirmation, read-only discovery-ID inspection before mapping, device-count discovery branches, water unknown handling, candidate credential validation before replacement, and rejection of visible token-entry fallback.
+- Identification original-state snapshots, restoration reads, second-device failure, manual temperature/power change protection, and explicit recovery.
+- Markdown validation, rejected-edit preservation, duplicate prevention across runner restarts, missed alarms, date-specific overrides, autumn/spring DST policy, notification-only retries, explicit/external change suppression and resumption, deadline checks after slow operations, changed-definition guards, local-date startup, and orphaned-routine pause/deletion.
 - Actual MCP SDK subprocess initialization, tools/list, and tools/call validation; no hardware or vault lookup required.
 - Static Postman CLI lint: fourteen requests, zero errors, zero warnings. Lint does not send API requests.
 

@@ -32,18 +32,24 @@ Prerequisites: Python 3.11–3.14, Git, [uv](https://docs.astral.sh/uv/getting-s
 git clone https://github.com/estebansolis/chilipad-mcp.git
 cd chilipad-mcp
 uv sync --frozen
-uv run --frozen chilipad-mcp setup
-uv run --frozen chilipad-mcp devices
 ```
 
-`uv.lock` pins the dependency graph. The server stays in this checkout, so keep its path stable. After installation, `.venv/bin/chilipad-mcp` can be used directly without invoking uv. This project has not been published to PyPI; do not install an unrelated package by name.
+`uv.lock` pins the dependency graph. The server stays in this checkout, so keep its path stable. After installation, `.venv/bin/chilipad-mcp` can be used directly without invoking uv. Commands below run from the repository directory; `uv sync` does not put `chilipad-mcp` on your global PATH. This project has not been published to PyPI; do not install an unrelated package by name.
 
-### Get a Sleepme API token
+Follow these steps in order: install the project above, get and save your token below, connect your client, then confirm device aliases before configuring routines.
+
+### Get and save a Sleepme API token
 
 1. Open [Sleepme](https://www.sleep.me) yourself and sign in. Do not give your assistant your password.
-2. Open **Account Details → Developer API**, following [Sleepme’s official setup guide](https://docs.developer.sleep.me/docs/setup/). The PRD also identifies [the developer account page](https://sleep.me/account/developers) as an entry point. Account menus and eligibility can vary; signed-in controls have not been verified for this release. If the option is missing, consult Sleepme support rather than inventing credentials or OAuth steps.
+2. Open **Account Details → Developer API**, following [Sleepme’s official setup guide](https://docs.developer.sleep.me/docs/setup/). You can also try [the developer account page](https://sleep.me/account/developers) after signing in. Account menus and eligibility can vary; signed-in controls have not been verified for this release. If the option is missing, consult Sleepme support rather than inventing credentials or OAuth steps.
 3. Create or retrieve your developer API token in that account interface.
 4. In your **own local terminal**, run `uv run --frozen chilipad-mcp setup` and paste it at the hidden prompt. Never paste it into chat, a tool argument, an issue, or an assistant's terminal tool whose input is recorded.
+
+After saving the token, verify read-only discovery:
+
+```sh
+uv run --frozen chilipad-mcp devices
+```
 
 Setup validates the candidate with `GET /devices` and saves it only after validation succeeds. It does not replace a working credential with a failed candidate. No device write happens during credential setup.
 
@@ -96,6 +102,8 @@ Assistant starter prompt:
 
 ## Daily use and routines
 
+First ask the connected assistant to call `list_devices`, inspect selected devices with `get_device_status(device_id=...)`, and help confirm aliases. Reading by a discovered ID does not assign a side or change the device. Follow the [ordered setup guide](docs/setup.md) for one-controller labeling or the optional two-controller identification test.
+
 After confirming a mapping, try “Check water on my side,” “Set my side to 70°F,” or “Show my routines.” Ask explicitly for both sides to change both; the assistant calls each target separately and reports each outcome. Unmapped or ambiguous aliases fail rather than guessing.
 
 `prepare_bed` uses a saved temperature routine, including power only if explicitly configured. For bedtime preconditioning, save the **action time** (for example 20 minutes before bedtime) and the allowed catch-up window; this release does not compute lead time from a separate bedtime field. Alarms here mean scheduled temperature changes or calendar reminders, **not reliable waking services**.
@@ -110,18 +118,20 @@ uv run --frozen chilipad-mcp inbox
 uv run --frozen chilipad-mcp runner
 ```
 
+The runner command stays in the foreground. Stop it with **Ctrl-C** before installing a background service, so only one runner owns the profile.
+
 Inbox delivery is durable local storage, not a push notification. Read it in a compatible assistant or with `inbox`; nothing will pop up or make a sound. Enabled routines require a confirmed target and a tested inbox. Full unattended operation also requires you to validate vault access in the actual background context. See [schedule schema](docs/routines.md) and [background services](docs/background.md).
 
 ## Local data, recovery, and troubleshooting
 
-Run `chilipad-mcp data-dir` to find local state. Default locations are `~/Library/Application Support/chilipad-mcp` on macOS and `$XDG_CONFIG_HOME/chilipad-mcp` (usually `~/.config/chilipad-mcp`) on Linux. `devices.md`, `alarms.md`, and `routines.md` are canonical definitions outside the clone. Directory access is restricted to the current user; atomic writes and locks coordinate clients. `CHILIPAD_DATA_DIR` optionally selects an isolated profile; keep every client and runner on the same profile to share the rate budget. Never use separate profiles for one account's simultaneous activity.
+From the repository directory, run `uv run --frozen chilipad-mcp data-dir` to find local state. Default locations are `~/Library/Application Support/chilipad-mcp` on macOS and `$XDG_CONFIG_HOME/chilipad-mcp` (usually `~/.config/chilipad-mcp`) on Linux. `devices.md`, `alarms.md`, and `routines.md` are canonical definitions outside the clone. Directory access is restricted to the current user; atomic writes and locks coordinate clients. `CHILIPAD_DATA_DIR` optionally selects an isolated profile; keep every client and runner on the same profile to share the rate budget. Never use separate profiles for one account's simultaneous activity.
 
 - **No token / locked vault:** unlock the OS vault and use local `setup`. No plaintext workaround is supported.
 - **No devices:** verify token/account and device claiming in Sleepme. Do not guess device IDs.
 - **Model rejected:** writes require a status model normalized to `Dock Pro` and explicit online status. Unknown model strings fail closed pending evidence.
 - **Rate limited:** all local processes share a 10-request discrete-minute budget. Other apps/Postman still count against Sleepme's account limit. Wait for the next minute or saved Retry-After. Reads can retry short 429 delays; writes never automatically retry.
 - **Uncertain write:** read status before issuing another command. Request acceptance and observed target are different from actual water temperature.
-- **Interrupted identification:** run `chilipad-mcp recover` or use `identify_devices` recovery. Original snapshots persist. If settings differ from the test, obtain fresh agreement before forced restoration. Sleeping/offline computers cannot restore immediately.
+- **Interrupted identification:** run `uv run --frozen chilipad-mcp recover` or use `identify_devices` recovery. Original snapshots persist. If settings differ from the test, obtain fresh agreement before forced restoration. Sleeping/offline computers cannot restore immediately.
 - **Invalid Markdown:** repair the strict JSON block. Manual invalid edits suspend schedule execution; the last valid snapshot remains available for repair. Free text cannot execute commands.
 - **Runner unavailable:** check service status, vault unlock, heartbeat, `runner-error.json`, and history. Computer sleep and network outages interrupt schedules.
 
