@@ -8,6 +8,7 @@
 - Allow orphaned routines to be listed, paused, or deleted; use each routine's local midnight on first runner start.
 - Preserve water observations when inbox delivery fails, reject visible token-entry fallback, and retain the longest shared Retry-After deadline.
 - Remove a systemd startup ordering cycle, document foreground-to-background handoff, and add explicit MCP tool descriptions.
+- Update GitHub Actions to current Node 24 releases while retaining the pinned uv version.
 
 ## 0.1.0 — 2026-10-23
 
