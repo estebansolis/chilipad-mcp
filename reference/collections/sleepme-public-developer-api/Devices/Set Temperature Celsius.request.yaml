@@ -1,0 +1,21 @@
+$kind: http-request
+description: |-
+  Set a temperature from 13 through 48 C in half-degree increments. -1.0 means MAX COLD; 999.0 means MAX HEAT. This changes the selected Dock Pro device.
+
+  Reference: https://docs.developer.sleep.me/api/
+url: "{{SleepMeAPI_Url}}/devices/:device_id"
+method: PATCH
+headers:
+  Accept: application/json
+  Content-Type: application/json
+pathVariables:
+  - key: device_id
+    value: "{{device_id}}"
+    description: Claimed device ID from List Devices.
+body:
+  type: json
+  content: |-
+    {
+      "set_temperature_c": 20.5
+    }
+order: 7000

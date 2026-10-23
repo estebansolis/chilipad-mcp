@@ -1,0 +1,22 @@
+$kind: http-request
+description: |-
+  Updates one or more Dock Pro controls. This preserved recipe sets 69 F and standby. All control fields are optional; send only the fields you want to change. Send control properties at the top level, without a control wrapper.
+
+  Reference: https://docs.developer.sleep.me/api/
+url: "{{SleepMeAPI_Url}}/devices/:device_id"
+method: PATCH
+headers:
+  Accept: application/json
+  Content-Type: application/json
+pathVariables:
+  - key: device_id
+    value: "{{device_id}}"
+    description: Claimed device ID from List Devices.
+body:
+  type: json
+  content: |-
+    {
+      "set_temperature_f": 69,
+      "thermal_control_status": "standby"
+    }
+order: 3000

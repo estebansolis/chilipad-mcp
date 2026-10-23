@@ -1,0 +1,371 @@
+openapi: 3.0.0
+info:
+  title: Sleep.me Public Developer API
+  version: '1.1'
+servers:
+  - url: 'https://api.developer.sleep.me/v1'
+    description: Production
+tags:
+  - name: Device Control
+    description: 'Get and update devices'
+  - name: Sleep Reports
+    description: 'Get sleep report data'
+paths:
+  '/devices':
+    get:
+      summary: Gets a list of the user's claimed devices
+      description: This endpoint will return a list of claimed devices for a given token.
+      tags:
+        - Device Control
+      responses:
+        '200':
+          description: Successful retrieval of claimed devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceList'
+        '400':
+          description: Bad Request
+        '401':
+          description: 'Unauthorized, you are missing / have invalid credentials'
+        '403':
+          description: 'Forbidden, you are not allowed to update this device'
+        '404':
+          description: Device not found.
+        '500':
+          description: Server error
+      operationId: post-partners
+  '/devices/{device_id}':
+    parameters:
+      - schema:
+          type: string
+        name: device_id
+        in: path
+        required: true
+    get:
+      summary: Gets the current status for a given device
+      description: This will give a device's metadata and control state
+      tags:
+        - Device Control
+      responses:
+        '200':
+          description: Successful device status read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '400':
+          description: Bad Request
+        '401':
+          description: 'Unauthorized, you are missing / have invalid credentials'
+        '403':
+          description: 'Forbidden, you are not allowed to read this device status'
+        '404':
+          description: Device not found.
+        '500':
+          description: Server error
+    patch:
+      summary: Updates a device's current status
+      description: This will update the claimed device's status. Note that not all properties have to be sent to make a successful update.
+      tags:
+        - Device Control
+      responses:
+        '200':
+          description: Successful device status read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusUpdateResponse'
+        '400':
+          description: Bad Request
+        '401':
+          description: 'Unauthorized, you are missing / have invalid credentials'
+        '403':
+          description: 'Forbidden, you are not allowed to read this device status'
+        '404':
+          description: Device not found.
+        '500':
+          description: Server error
+  '/sleep-reports/':
+    get:
+      summary: Returns Sleep Report data for a given time range
+      tags:
+        - Sleep Reports
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          example: '2021-01-01'
+                          description: ISO8601 date in the time_zone specified.
+                        sessions:
+                          type: array
+                          items:
+                            type: object
+                            description: All duration and latency fields are in minutes.
+                            properties:
+                              id:
+                                type: string
+                                minLength: 1
+                                example: c7atbco90p9tc02ec6j0
+                                description: XID format.
+                              enter_bed_time:
+                                type: string
+                                example: '2021-01-01T13:00:00Z'
+                                description: RFC3339 date time when partner user entered bed.
+                                format: date-time
+                              exit_bed_time:
+                                type: string
+                                example: '2021-01-01T14:00:00Z'
+                                description: RFC3339 date time when partner user exited bed.
+                                format: date-time
+                              awake_duration:
+                                type: integer
+                                example: 10
+                                description: Awake duration (in minutes)
+                                nullable: true
+                              rem_sleep_duration:
+                                type: integer
+                                example: 30
+                                description: REM sleep duration (in minutes)
+                                nullable: true
+                              light_sleep_duration:
+                                type: integer
+                                example: 30
+                                description: Light sleep duration (in minutes)
+                                nullable: true
+                              deep_sleep_duration:
+                                type: integer
+                                example: 30
+                                description: Deep sleep duration (in minutes)
+                                nullable: true
+                              total_sleep_duration:
+                                type: integer
+                                example: 110
+                                description: Total sleep duration (in minutes)
+                                nullable: true
+                              in_bed_duration:
+                                type: integer
+                                example: 120
+                                description: In bed duration (in minutes)
+                                nullable: true
+                              total_session_duration:
+                                type: integer
+                                example: 130
+                                description: Total session duration (in minutes) equaling exit_bed_time - enter_bed_time
+                                nullable: true
+                              sleep_latency:
+                                type: integer
+                                example: 110
+                                description: Sleep latency (in minutes)
+                                nullable: true
+                              hypnogram:
+                                type: object
+                                properties:
+                                  raw_hypnogram_segment_count:
+                                    type: integer
+                                    example: 1
+                                    description: Segment count of hypnogram.
+                                  segments:
+                                    type: array
+                                    items:
+                                      $ref: '#/components/schemas/HypnogramSegment'
+                        sleep_score_percent:
+                          type: int
+                          example: 65
+      description: |-
+        Returns your sleep report data, including durations and hypnogram data for charting.
+
+        If `start_date` is not provided, the API will use the current date as the default.
+
+        `start_date` will lock to 12:00:00 AM of that day (e.g. `start_date=2021-01-15` will be evaluated as `2021-01-15T00:00:00` for the `time_zone` set.
+
+        If `days_back` is not provided, the API will default to 0 and return today's sleep data.
+
+        The max value of `days_back` is 6, which will return the last week of sleep data including today.
+
+        Sessions will be looked up by their exit bed time and evaluated as `{start_date}T00:00:00 <= {exit bed time} <= {start_date - days_back}T23:59:59`.
+
+        If no `time_zone` is provided, the API will set the `time_zone` to `UTC`.
+
+      parameters:
+        - schema:
+            type: string
+            example: '2021-01-01'
+            format: date
+          in: query
+          name: start_date
+          description: ISO8601 date of earliest date to return sleep sessions for (the date for a session is evaluated by when it was completed)
+        - schema:
+            type: int
+            example: 0
+          in: query
+          name: days_back
+          description: Number of days back from start_date to return reports.  The default, 0, returns just today's reports.  The max is 6, which will include the last week of data.
+        - schema:
+            type: string
+            example: America/New_York
+            default: UTC
+          in: query
+          name: time_zone
+          description: Any IANA timezone name        
+components:
+  schemas:
+    DeviceList:
+      title: Device List
+      type: array
+      uniqueItems: true
+      minItems: 1
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            minLength: 1
+            example: 'zx-c4ggl2522wj5t2265jg'
+            description: The ID of the device.
+          name:
+            type: string
+            minLength: 1
+            example: 'My Dock Pro'
+            description: The name of the device.
+          attachments:
+            type: array
+            uniqueItems: true
+            minLength: 1
+            description: The attachments for the given device.
+            items:
+              type: string
+              example: "CHILIPAD_PRO"
+    Status:
+      title: Status
+      type: object
+      properties:
+        about:
+          type: object
+          properties:
+            firmware_version:
+              type: string
+              example: "1.0"
+            ip_address:
+              type: string
+              example: 3.211.177.219
+            lan_address:
+              type: string
+              example: 192.168.1.1
+            mac_address:
+              type: string
+              example: "89:3F:28:3A:C3:A9"
+            model:
+              type: string
+              example: DP999NA
+            serial_number:
+              type: string
+              example: "1234567890"
+        control:
+          type: object
+          properties:
+            display_temperature_unit:
+              type: string
+              example: f
+            set_temperature_c:
+              type: number
+              example: 35
+            set_temperature_f:
+              type: number
+              example: 95
+            thermal_control_status:
+              type: string
+              example: active
+            time_zone:
+              type: string
+              example: "America/New_York"
+        status:
+          type: object
+          properties:
+            is_connected:
+              type: boolean
+              example: true
+            is_water_low:
+              type: boolean
+              example: false
+            water_level:
+              type: number
+              example: 100
+            water_temperature_f:
+              type: number
+              example: 91
+            water_temperature_c:
+              type: number
+              example: 32.5
+    DPControl:
+      title: Dock Pro Control
+      type: object
+      properties:
+        thermal_control_status:
+          type: string
+          example: "active"
+          optional: true
+          enum:
+            - active
+            - standby
+        set_temperature_f:
+          type: number
+          example: 72.0
+          optional: true
+        set_temperature_c:
+          type: number
+          example: 20.5
+          optional: true
+        display_temperature_unit:
+          type: string
+          example: "f"
+          optional: true
+          enum:
+            - c
+            - f
+        time_zone:
+          type: string
+          example: "America/New_York"
+          optional: true
+    StatusUpdateResponse:
+      title: Status Update Response
+      type: object
+    HypnogramSegment:
+      title: HypnogramSegment
+      type: object
+      description: 'A hypnogram segment defines the time spent in the different stages of sleep (AWAKE, LIGHT_SLEEP, DEEP_SLEEP, and REM_SLEEP). These segments are ordered by their `start` offset in minutes from the beginning of a sleep session. The segments start with a segment with a `start = 0` and from then on every `start` is equal to the previous segments `end`.'
+      properties:
+        stage:
+          type: string
+          enum:
+            - AWAKE
+            - LIGHT_SLEEP
+            - REM_SLEEP
+            - DEEP_SLEEP
+            - NO_DATA
+          example: REM_SLEEP
+        start:
+          type: integer
+          minimum: 0
+          example: 0
+          description: The offset (in minutes) from the beginning of the sleep session that marks the start of this segment.
+        end:
+          type: integer
+          example: 60
+          description: The offset (in minutes) from the beginning of the sleep session that marks the end of this segment.
+          minimum: 1
+      required:
+        - stage
+        - start
+        - end

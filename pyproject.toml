@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chilipad-mcp"
+version = "0.1.0"
+description = "Unofficial local MCP server for Sleepme Chilipad devices"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "Esteban Solis"}]
+dependencies = ["mcp>=1.20,<2", "httpx>=0.28,<1", "keyring>=25,<26"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.14,<1", "build>=1,<2"]
+
+[project.scripts]
+chilipad-mcp = "chilipad_mcp.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

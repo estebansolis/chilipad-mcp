@@ -1,0 +1,21 @@
+$kind: http-request
+description: |-
+  Reads durations, sleep scores, sessions, and hypnogram data for the selected date range. The default collection days_back is 6. start_date is optional and disabled by default.
+
+  Reference: https://docs.developer.sleep.me/api/
+url: "{{SleepMeAPI_Url}}/sleep-reports/?days_back={{days_back}}&time_zone={{time_zone}}"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: start_date
+    value: "{{start_date}}"
+    disabled: true
+    description: Optional YYYY-MM-DD date. Disabled to use the API current-date default; set start_date and enable to select a date.
+  - key: days_back
+    value: "{{days_back}}"
+    description: 0 through 6. Set 6 for a week including the selected date.
+  - key: time_zone
+    value: "{{time_zone}}"
+    description: IANA time zone name; API default UTC when omitted.
+order: 1000

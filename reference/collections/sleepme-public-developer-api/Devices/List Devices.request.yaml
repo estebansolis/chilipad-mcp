@@ -1,0 +1,10 @@
+$kind: http-request
+description: |-
+  Returns all claimed devices for this token, including IDs, names, and attachments.
+
+  Reference: https://docs.developer.sleep.me/api/
+url: "{{SleepMeAPI_Url}}/devices"
+method: GET
+headers:
+  Accept: application/json
+order: 1000

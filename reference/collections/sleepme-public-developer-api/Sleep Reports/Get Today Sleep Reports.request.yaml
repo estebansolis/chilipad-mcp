@@ -1,0 +1,21 @@
+$kind: http-request
+description: |-
+  Reads today’s sleep reports in time_zone using days_back=0 and the API current-date default. Enable start_date to read one specific day.
+
+  Reference: https://docs.developer.sleep.me/api/
+url: "{{SleepMeAPI_Url}}/sleep-reports/?days_back=0&time_zone={{time_zone}}"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: start_date
+    value: "{{start_date}}"
+    disabled: true
+    description: Optional YYYY-MM-DD date. Disabled to use the API current-date default; set start_date and enable to select a date.
+  - key: days_back
+    value: "0"
+    description: 0 through 6. Set 6 for a week including the selected date.
+  - key: time_zone
+    value: "{{time_zone}}"
+    description: IANA time zone name; API default UTC when omitted.
+order: 2000

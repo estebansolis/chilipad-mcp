@@ -1,0 +1,14 @@
+$kind: http-request
+description: |-
+  Reads device identity, controls, status, and model-specific properties. Dock Pro and Sleep Tracker expose different status fields.
+
+  Reference: https://docs.developer.sleep.me/api/
+url: "{{SleepMeAPI_Url}}/devices/:device_id"
+method: GET
+headers:
+  Accept: application/json
+pathVariables:
+  - key: device_id
+    value: "{{device_id}}"
+    description: Claimed device ID from List Devices.
+order: 2000

@@ -1,0 +1,671 @@
+{
+  "info": {
+    "_postman_id": "4142850a-b899-4e06-aa32-1c62a934a3ff",
+    "name": "Sleepme Public Developer API",
+    "description": "All four operations in the Sleepme Public Developer API v1.1, plus individual PATCH recipes for every documented writable control property.\n\nSources: https://docs.developer.sleep.me/api/ and https://docs.developer.sleep.me/docs/apiexamples/. Reference checked 2026-10-05.\n\nSet SleepMeAPI_Token to your Sleepme developer token and device_id to an ID returned by List Devices. Requests inherit collection bearer authentication. SleepMeAPI_Url is the canonical base URL variable.\n\nRun individual requests using postman collection run <collection-path> -i \"Folder/Request Name\". See postman/files/sleepme-cli-commands.txt for every command. Use a private Postman environment to override the token and variables.\n\nPATCH requests change the selected device. Choose the specific recipe you want to execute. The documented limit is 10 requests per account per discrete minute; when making repeated calls, handle 429 responses with exponential backoff.\n\nSleep reports accept optional start_date (ISO8601 date, defaults to current date), days_back (0 through 6, defaults to 0), and time_zone (IANA name, defaults to UTC). The reference contains inconsistent interval wording; the collection uses the documented parameter defaults and bounds without rewriting that interval.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "10847419"
+  },
+  "item": [
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "List Devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices"
+              ]
+            },
+            "description": "Returns all claimed devices for this token, including IDs, names, and attachments.\n\nReference: https://docs.developer.sleep.me/api/"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Device Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Reads device identity, controls, status, and model-specific properties. Dock Pro and Sleep Tracker expose different status fields.\n\nReference: https://docs.developer.sleep.me/api/"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Device Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Updates one or more Dock Pro controls. This preserved recipe sets 69 F and standby. All control fields are optional; send only the fields you want to change. Send control properties at the top level, without a control wrapper.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"set_temperature_f\": 69,\n  \"thermal_control_status\": \"standby\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Turn Device On",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Starts the thermal control systems. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"thermal_control_status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Turn Device Off",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Stops the thermal control systems. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"thermal_control_status\": \"standby\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Temperature Fahrenheit",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Set an integer temperature from 55 through 115 F. -1 means MAX COLD; 999 means MAX HEAT. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"set_temperature_f\": 72\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Temperature Celsius",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Set a temperature from 13 through 48 C in half-degree increments. -1.0 means MAX COLD; 999.0 means MAX HEAT. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"set_temperature_c\": 20.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Maximum Cooling",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Sets the documented MAX COLD sentinel. Thermal control state is unchanged by this payload. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"set_temperature_f\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Maximum Heating",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Sets the documented MAX HEAT sentinel. Thermal control state is unchanged by this payload. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"set_temperature_f\": 999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Display Fahrenheit",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Shows Fahrenheit on the unit display. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_temperature_unit\": \"f\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Display Celsius",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Shows Celsius on the unit display. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_temperature_unit\": \"c\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set Device Time Zone",
+          "response": [],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/devices/:device_id",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "devices",
+                ":device_id"
+              ],
+              "variable": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}",
+                  "description": "Claimed device ID from List Devices."
+                }
+              ]
+            },
+            "description": "Sets the device time zone to an IANA time zone name. This changes the selected Dock Pro device.\n\nReference: https://docs.developer.sleep.me/api/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_zone\": \"{{time_zone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sleep Reports",
+      "item": [
+        {
+          "name": "List Sleep Reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/sleep-reports/?days_back={{days_back}}&time_zone={{time_zone}}",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "sleep-reports",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "{{start_date}}",
+                  "disabled": true,
+                  "description": "Optional YYYY-MM-DD date. Disabled to use the API current-date default; set start_date and enable to select a date."
+                },
+                {
+                  "key": "days_back",
+                  "value": "{{days_back}}",
+                  "description": "0 through 6. Set 6 for a week including the selected date."
+                },
+                {
+                  "key": "time_zone",
+                  "value": "{{time_zone}}",
+                  "description": "IANA time zone name; API default UTC when omitted."
+                }
+              ]
+            },
+            "description": "Reads durations, sleep scores, sessions, and hypnogram data for the selected date range. The default collection days_back is 6. start_date is optional and disabled by default.\n\nReference: https://docs.developer.sleep.me/api/"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Today Sleep Reports",
+          "response": [],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{SleepMeAPI_Url}}/sleep-reports/?days_back=0&time_zone={{time_zone}}",
+              "host": [
+                "{{SleepMeAPI_Url}}"
+              ],
+              "path": [
+                "sleep-reports",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "{{start_date}}",
+                  "disabled": true,
+                  "description": "Optional YYYY-MM-DD date. Disabled to use the API current-date default; set start_date and enable to select a date."
+                },
+                {
+                  "key": "days_back",
+                  "value": "0",
+                  "description": "0 through 6. Set 6 for a week including the selected date."
+                },
+                {
+                  "key": "time_zone",
+                  "value": "{{time_zone}}",
+                  "description": "IANA time zone name; API default UTC when omitted."
+                }
+              ]
+            },
+            "description": "Reads today\u2019s sleep reports in time_zone using days_back=0 and the API current-date default. Enable start_date to read one specific day.\n\nReference: https://docs.developer.sleep.me/api/"
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{SleepMeAPI_Token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "SleepMeAPI_Url",
+      "value": "https://api.developer.sleep.me/v1",
+      "type": "string",
+      "description": "Base URL, without a trailing slash."
+    },
+    {
+      "key": "SleepMeAPI_Token",
+      "value": "",
+      "type": "string",
+      "description": "Set your Sleepme developer bearer token in a private environment."
+    },
+    {
+      "key": "device_id",
+      "value": "",
+      "type": "string",
+      "description": "Set a claimed device ID returned by List Devices."
+    },
+    {
+      "key": "start_date",
+      "value": "",
+      "type": "string",
+      "description": "Optional YYYY-MM-DD date. Enable the request query parameter to use it."
+    },
+    {
+      "key": "days_back",
+      "value": "6",
+      "type": "string",
+      "description": "0 through 6; 6 includes the last week."
+    },
+    {
+      "key": "time_zone",
+      "value": "UTC",
+      "type": "string",
+      "description": "IANA time zone name, for example America/Los_Angeles."
+    }
+  ]
+}

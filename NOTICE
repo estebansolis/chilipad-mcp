@@ -1,0 +1,12 @@
+Chilipad MCP is an independent project by Esteban Solis.
+Not affiliated with or endorsed by Sleepme/Chilipad, OpenAI, Anthropic, or Meta.
+
+reference/ contains Sleepme API reference material and a derivative Postman collection.
+API title: Sleep.me Public Developer API, OpenAPI reference version 1.1.
+Original reference: https://docs.developer.sleep.me/api/device-control.yaml
+Setup: https://docs.developer.sleep.me/docs/setup/
+Collection: https://github.com/estebansolis/sleepme-postman
+Frozen source revision: 42f4f72a9ecc435d31dfaf0099e3b69b44e60b93
+Original reference retrieval date recorded by source: October 5, 2026.
+Original attribution is retained. No license to third-party Sleepme material is asserted
+by this project's MIT license. No official SDK status or trademark rights are claimed.

@@ -1,0 +1,5 @@
+{
+  "about": {"model": "Dock Pro", "firmware_version": "synthetic", "serial_number": "SYNTHETIC-NOT-REAL"},
+  "control": {"set_temperature_f": 72, "set_temperature_c": 22, "thermal_control_status": "standby", "display_temperature_unit": "f", "time_zone": "UTC"},
+  "status": {"is_connected": true, "is_water_low": null, "water_level": null, "water_temperature_f": 72}
+}

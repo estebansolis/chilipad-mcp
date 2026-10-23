@@ -1,0 +1,16 @@
+{
+  "reports": [{
+    "date": "2026-10-22",
+    "sleep_score_percent": null,
+    "sessions": [{
+      "id": "synthetic-session",
+      "enter_bed_time": "2026-10-22T01:00:00Z",
+      "exit_bed_time": "2026-10-22T02:00:00Z",
+      "awake_duration": null,
+      "rem_sleep_duration": null,
+      "deep_sleep_duration": null,
+      "total_sleep_duration": null,
+      "hypnogram": {"segments": [{"start": 0, "end": 60, "stage": "NO_DATA"}]}
+    }]
+  }]
+}

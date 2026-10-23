@@ -1,0 +1,21 @@
+$kind: http-request
+description: |-
+  Sets the documented MAX HEAT sentinel. Thermal control state is unchanged by this payload. This changes the selected Dock Pro device.
+
+  Reference: https://docs.developer.sleep.me/api/
+url: "{{SleepMeAPI_Url}}/devices/:device_id"
+method: PATCH
+headers:
+  Accept: application/json
+  Content-Type: application/json
+pathVariables:
+  - key: device_id
+    value: "{{device_id}}"
+    description: Claimed device ID from List Devices.
+body:
+  type: json
+  content: |-
+    {
+      "set_temperature_f": 999
+    }
+order: 9000
