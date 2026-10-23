@@ -4,6 +4,8 @@ Release: experimental 0.1.0, October 23, 2026. No real Sleepme credential or dev
 
 ## Completed locally
 
+63 automated tests pass with warnings treated as errors.
+
 - Locked dependency resolution and clean Python environment installation on macOS arm64 / Python 3.14.
 - Synthetic API tests: valid/invalid unit boundaries, sentinel modes, minimal PATCH payloads, model/connectivity guards, redacted errors, ambiguous write timeouts, shared budget, and 429 blocking.
 - Mapping targeting and confirmation, device-count discovery branches, water unknown handling, candidate credential validation before replacement.
