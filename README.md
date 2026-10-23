@@ -1,6 +1,6 @@
 # Chilipad MCP — unofficial
 
-Control supported Sleepme Chilipad devices from an assistant using a local [Model Context Protocol](https://modelcontextprotocol.io/) server. Check water status, adjust your side of the bed, read available Sleep Tracker reports, and save local temperature routines.
+Control supported [Sleepme Chilipad](https://sleep.me/product/chilipad) devices from an assistant using a local [Model Context Protocol](https://modelcontextprotocol.io/) server. Check water status, adjust your side of the bed, read available Sleep Tracker reports, and save local temperature routines.
 
 **This is an independent community project by Esteban Solis. It is not made, endorsed, certified, or supported by Sleepme, Chilipad, OpenAI, Anthropic, or Meta.** Product names belong to their respective owners.
 
